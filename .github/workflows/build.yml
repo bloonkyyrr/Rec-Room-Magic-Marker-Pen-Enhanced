@@ -1,10 +1,18 @@
-name: Build
+name: Build and release
 
-# Builds every push to the default branch and every pull request, so a broken
-# commit is caught before it reaches a release.
+# One pipeline: the release job depends on the build job, so a build that
+# succeeds always publishes, and a build that fails never publishes anything.
+#
+#   push to master/main  -> build, then update the rolling "latest" release
+#   push a version tag   -> build, then create that versioned release as latest
+#   pull request         -> build only (no release)
+#   manual run           -> build, then update the rolling "latest" release
 on:
   push:
     branches: [master, main]
+    tags:
+      - 'v*'
+      - '[0-9]*'
   pull_request:
   workflow_dispatch:
 
@@ -13,9 +21,16 @@ permissions:
 
 env:
   DOTNET_VERSION: 9.0.x
-  DOTNET_NOLOGO: true
-  DOTNET_CLI_TELEMETRY_OPTOUT: true
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  # Tag pushes keep their tag; anything else updates one rolling "latest" release.
+  RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+  ASSET_NAME: RecRoomPainter-${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}-win-x64.zip
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -62,12 +77,59 @@ jobs:
           -o publish
 
       - name: Package
-        run: Compress-Archive -Path 'publish/*' -DestinationPath 'RecRoomPainter-win-x64.zip' -Force
+        run: Compress-Archive -Path 'publish/*' -DestinationPath "${{ env.ASSET_NAME }}" -Force
 
-      - name: Upload artifact
+      - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: RecRoomPainter-win-x64
-          path: RecRoomPainter-win-x64.zip
+          name: ${{ env.RELEASE_TAG }}-win-x64
+          path: ${{ env.ASSET_NAME }}
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    name: Release (latest)
+    needs: build
+    # Runs only when the build succeeded, and only for a tag, the default branch
+    # or a manual run. Pull request builds are never published.
+    if: >
+      needs.build.result == 'success' &&
+      (startsWith(github.ref, 'refs/tags/') ||
+       github.ref == 'refs/heads/master' ||
+       github.ref == 'refs/heads/main' ||
+       github.event_name == 'workflow_dispatch')
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.RELEASE_TAG }}-win-x64
+
+      # The rolling release reuses one tag, so move it to this commit. Harmless if
+      # it fails (protected tag), the asset is still replaced below.
+      - name: Move the rolling tag to this build
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          git tag -f "$RELEASE_TAG" "$GITHUB_SHA"
+          git push -f origin "refs/tags/$RELEASE_TAG"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Latest build' }}
+          body: ${{ startsWith(github.ref, 'refs/tags/') && '' || format('Automatic build of {0} from {1}.', github.sha, github.ref_name) }}
+          # Versioned tags get generated notes; the rolling build keeps a short body.
+          generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/') }}
+          make_latest: true
+          fail_on_unmatched_files: true
+          files: ${{ env.ASSET_NAME }}
