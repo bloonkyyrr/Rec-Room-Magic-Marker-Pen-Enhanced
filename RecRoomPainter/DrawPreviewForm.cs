@@ -21,7 +21,43 @@ namespace RecRoomPainter
 
         public void UpdateImage(Bitmap img)
         {
+            // While the overlay is open it takes over each preview bitmap it is handed, so
+            // the one being replaced has no other owner left and can be released.
+            Image previous = pictureBox1.Image;
             pictureBox1.Image = img;
+            if (previous == null || ReferenceEquals(previous, img))
+                return;
+            try
+            {
+                previous.Dispose();
+            }
+            catch
+            {
+                // Already released by the owner; nothing to do.
+            }
+        }
+
+        // Pixel-accurate placement: dragging is coarse, so the arrow keys nudge the
+        // whole overlay by one pixel (ten with Shift) without touching its size.
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            int step = (keyData & Keys.Shift) == Keys.Shift ? 10 : 1;
+            switch (keyData & Keys.KeyCode)
+            {
+                case Keys.Left:
+                    Location = new Point(Location.X - step, Location.Y);
+                    return true;
+                case Keys.Right:
+                    Location = new Point(Location.X + step, Location.Y);
+                    return true;
+                case Keys.Up:
+                    Location = new Point(Location.X, Location.Y - step);
+                    return true;
+                case Keys.Down:
+                    Location = new Point(Location.X, Location.Y + step);
+                    return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private void pictureBox1_Click(object sender, System.EventArgs e)

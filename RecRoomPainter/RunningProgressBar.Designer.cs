@@ -49,21 +49,21 @@
             tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 2;
-            tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 64.44444F));
-            tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 35.5555573F));
-            tableLayoutPanel1.Size = new System.Drawing.Size(260, 45);
+            tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 52F));
+            tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 48F));
+            tableLayoutPanel1.Size = new System.Drawing.Size(260, 66);
             tableLayoutPanel1.TabIndex = 0;
             // 
             // timeLabel
             // 
-            timeLabel.AutoSize = true;
+            timeLabel.AutoSize = false;
             timeLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             timeLabel.ForeColor = System.Drawing.SystemColors.HighlightText;
-            timeLabel.Location = new System.Drawing.Point(3, 29);
+            timeLabel.Location = new System.Drawing.Point(3, 34);
             timeLabel.Name = "timeLabel";
-            timeLabel.Size = new System.Drawing.Size(167, 16);
+            timeLabel.Size = new System.Drawing.Size(167, 32);
             timeLabel.TabIndex = 2;
-            timeLabel.Text = "D00:H00:M00:S00";
+            timeLabel.Text = "0:00   ETA --";
             timeLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // runningProgressBar1
@@ -92,7 +92,7 @@
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             BackColor = System.Drawing.SystemColors.ActiveCaptionText;
-            ClientSize = new System.Drawing.Size(260, 45);
+            ClientSize = new System.Drawing.Size(260, 66);
             Controls.Add(tableLayoutPanel1);
             FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             Name = "RunningProgressBar";

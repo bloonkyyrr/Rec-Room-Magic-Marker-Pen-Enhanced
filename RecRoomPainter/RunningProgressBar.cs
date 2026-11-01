@@ -7,8 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Windows.Globalization.NumberFormatting;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static RecRoomPainter.MainForm;
 
 
@@ -37,15 +35,31 @@ namespace RecRoomPainter
             }
         }
 
-        public void UpdateProgress(int currentValue, int endValue, int time)
+        // Compact H:MM:SS / M:SS text for the small overlay.
+        private static string ShortTime(int milliseconds)
         {
+            TimeSpan span = TimeSpan.FromMilliseconds(Math.Max(0, milliseconds));
+            return span.TotalHours >= 1
+                ? $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}"
+                : $"{span.Minutes}:{span.Seconds:00}";
+        }
+
+        public void UpdateProgress(int currentValue, int endValue, int time, int eta = -1, bool paused = false)
+        {
+            string elapsed;
             try
             {
-                timeLabel.Text = ConvertMillisecondsToTimeFormat(time);
+                elapsed = ShortTime(time);
             }
-            catch {
-                timeLabel.Text = "D00:H00:M00:S00";
+            catch
+            {
+                elapsed = "0:00";
             }
+
+            // Second line: a self-correcting ETA, or the paused state.
+            timeLabel.Text = paused
+                ? $"{elapsed}   PAUSED"
+                : $"{elapsed}   ETA {(eta > 0 ? ShortTime(eta) : "--")}";
             try
             {
                 int percent = (int)((double)(endValue - currentValue) / endValue * 100);
